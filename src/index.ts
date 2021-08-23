@@ -25,6 +25,7 @@ const findPlants = async (token: string) => {
   return await Promise.allSettled(lands.map(async land => {
     const resp = (await axios.get(`https://backend-farm.plantvsundead.com/land/${land.x}/${land.y}`, {
       headers: {
+        'User-Agent': 'PVU',
         'Authorization': `Bearer Token: ${token}`
       },
     }))?.data?.data;
@@ -52,6 +53,7 @@ const getPlants = async (ownerId: string, offset = 0, plants = []): Promise<any[
   const limit = 20; 
   const response = (await axios.get(`https://backend-farm.plantvsundead.com/farms/other/${ownerId}?limit=20&offset=${offset}`, {
     headers: {
+      'User-Agent': 'PVU',
       'Authorization': `Bearer Token: ${token}`
     },
   }))?.data?.data;
