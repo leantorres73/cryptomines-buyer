@@ -15,9 +15,12 @@ const token: string = process.env.TOKEN  || '';
 exports.main = async (event: any) => {
   // cloudwatch
   if (event && event.type && event.type === 'crawlData') {
-    await findPlants(token);
+    return await findPlants(token);
+  } else {
+    // we can handle endpoints here if we want
+    return await findPlants(token);
   }
-  return await findPlants(token);
+  
 } 
 
 const findPlants = async (token: string) => {
@@ -66,8 +69,8 @@ const getPlants = async (ownerId: string, offset = 0, plants = []): Promise<any[
 
 const getLands = () => {
   const lands = [];
-  const min = -4;
-  const max = 4;
+  const min = -16;
+  const max = 16;
   for (let x = min; x < max; x++) {
     for (let y = min; y < max; y++) {
       lands.push({x, y});
@@ -75,5 +78,3 @@ const getLands = () => {
   }
   return lands;
 }
-
-exports.main();
