@@ -16,11 +16,11 @@ exports.main = async (event: any) => {
   // cloudwatch
   if (event && event.type && event.type === 'crawlData') {
     return await findPlants(token);
-  } else {
+  } else if (event && event.type && event.type === 'nearPlants') {
     // we can handle endpoints here if we want
-    return await findPlants(token);
+    return await getNearPlans();
   }
-  
+  return;
 } 
 
 const findPlants = async (token: string) => {
@@ -40,10 +40,10 @@ const findPlants = async (token: string) => {
       return await Promise.allSettled(plantResponse.map(async (plant: any) => {
         return await connection.query(
           'REPLACE INTO plants SET id = ?, plant = ?, date = ?, URL = ?, crawlDate = ?', [
-            plant.plantId,
-            plant,
+            plant.id,
+            JSON.stringify(plant),
             new Date(plant.activeTools.find((tool: any) => tool.type === 'WATER').endTime),
-            `https://marketplace.plantvsundead.com/login#/farm/${plant.plantId}`,
+            `https://marketplace.plantvsundead.com/login#/farm/${plant.id}`,
              new Date()
           ]);
       }));
@@ -68,6 +68,11 @@ const getPlants = async (ownerId: string, offset = 0, plants = []): Promise<any[
     }
   }
   return plants;
+}
+
+const getNearPlans = async () => {
+  return await connection.query(
+    'SELECT * from pvu.plants WHERE date <= NOW() - INTERVAL 10 MINUTE;');
 }
 
 const getLands = () => {
