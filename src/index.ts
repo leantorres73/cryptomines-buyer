@@ -25,7 +25,8 @@ exports.main = async (event: any) => {
 
 const findPlants = async (token: string) => {
   const lands = getLands();
-  return await Promise.allSettled(lands.map(async land => {
+  for (const land of lands) {
+    await timeout(200);
     const resp = (await axios.get(`https://backend-farm.plantvsundead.com/land/${land.x}/${land.y}`, {
       headers: {
         'User-Agent': 'PVU',
@@ -37,8 +38,8 @@ const findPlants = async (token: string) => {
       // check plants for owner ID
       const plantResponse = await getPlants(ownerId);
       // check active tools
-      return await Promise.allSettled(plantResponse.map(async (plant: any) => {
-        return await connection.query(
+      for (const plant of plantResponse) {
+        await connection.query(
           'REPLACE INTO plants SET id = ?, plant = ?, date = ?, URL = ?, crawlDate = ?', [
             plant.id,
             JSON.stringify(plant),
@@ -46,25 +47,33 @@ const findPlants = async (token: string) => {
             `https://marketplace.plantvsundead.com/login#/farm/${plant.id}`,
              new Date()
           ]);
-      }));
+      }
     }
-    return;
-  }));
+  }
 }
 
-const getPlants = async (ownerId: string, offset = 0, plants = []): Promise<any[]> => {
+const getPlants = async (ownerId: string, offset = 0): Promise<any[]> => {
+  let still = true;
+  let plants: any[] = [];
   const maxPagelimit = 20;
-  const response = (await axios.get(`https://backend-farm.plantvsundead.com/farms/other/${ownerId}?limit=${maxPagelimit}&offset=${offset}`, {
-    headers: {
-      'User-Agent': 'PVU',
-      'Authorization': `Bearer Token: ${token}`
-    },
-  }))?.data;
-  if (response.status === 0) {
-    plants = plants.concat(response.data);
-    if (response.total > offset + maxPagelimit) {
-      await timeout(1000);
-      return await getPlants(ownerId, offset + maxPagelimit, plants);
+  while (still) {
+    await timeout(200);
+    const response = (await axios.get(`https://backend-farm.plantvsundead.com/farms/other/${ownerId}?limit=${maxPagelimit}&offset=${offset}`, {
+      headers: {
+        'User-Agent': 'PVU',
+        'Authorization': `Bearer Token: ${token}`
+      },
+    }))?.data;
+    if (response.status === 0) {
+      plants = plants.concat(response.data);
+      if (response.total > offset + maxPagelimit) {
+        offset += maxPagelimit;
+        still = true;
+      } else {
+        still = false;
+      }
+    } else {
+      still = false;
     }
   }
   return plants;

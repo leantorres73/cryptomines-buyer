@@ -10,7 +10,7 @@ export class PvuLambdaStack extends cdk.Stack {
       this,
       'PVULambda',
       {
-        timeout: cdk.Duration.minutes(5),
+        timeout: cdk.Duration.minutes(15),
         runtime: lambda.Runtime.NODEJS_12_X,
         entry: 'src/index.ts',
         environment: {
