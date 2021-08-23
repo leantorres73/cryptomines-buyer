@@ -40,7 +40,7 @@ const findPlants = async (token: string) => {
       return await Promise.allSettled(plantResponse.map(async (plant: any) => {
         return await connection.query(
           'REPLACE INTO plants SET id = ?, plant = ?, date = ?, URL = ?, crawlDate = ?', [
-            plant.id,
+            plant.plantId,
             plant,
             new Date(plant.activeTools.find((tool: any) => tool.type === 'WATER').endTime),
             `https://marketplace.plantvsundead.com/login#/farm/${plant.plantId}`,
@@ -53,16 +53,19 @@ const findPlants = async (token: string) => {
 }
 
 const getPlants = async (ownerId: string, offset = 0, plants = []): Promise<any[]> => {
-  const limit = 20; 
-  const response = (await axios.get(`https://backend-farm.plantvsundead.com/farms/other/${ownerId}?limit=20&offset=${offset}`, {
+  const maxPagelimit = 20;
+  const response = (await axios.get(`https://backend-farm.plantvsundead.com/farms/other/${ownerId}?limit=${maxPagelimit}&offset=${offset}`, {
     headers: {
       'User-Agent': 'PVU',
       'Authorization': `Bearer Token: ${token}`
     },
-  }))?.data?.data;
-  plants = plants.concat(response);
-  if (response.total < offset + limit) {
-    return await getPlants(ownerId, offset + limit, plants);
+  }))?.data;
+  if (response.status === 0) {
+    plants = plants.concat(response.data);
+    if (response.total > offset + maxPagelimit) {
+      await timeout(1000);
+      return await getPlants(ownerId, offset + maxPagelimit, plants);
+    }
   }
   return plants;
 }
@@ -77,4 +80,8 @@ const getLands = () => {
     }
   }
   return lands;
+}
+
+function timeout(ms: number) {
+  return new Promise(resolve => setTimeout(resolve, ms));
 }
