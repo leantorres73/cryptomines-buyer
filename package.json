@@ -5,6 +5,7 @@
     "pvu-lambda": "bin/pvu-lambda.js"
   },
   "scripts": {
+    "start": "tsc src/index.ts && node src/index.js",
     "build": "tsc",
     "watch": "tsc -w",
     "test": "jest",
@@ -25,7 +26,13 @@
     "source-map-support": "^0.5.16"
   },
   "dependencies": {
+    "@truffle/hdwallet-provider": "^1.5.1",
     "axios": "^0.21.1",
-    "mysql2": "^2.3.0"
+    "dotenv": "^10.0.0",
+    "mysql2": "^2.3.0",
+    "node-cron": "^3.0.0",
+    "node-telegram-bot-api": "^0.54.0",
+    "web3": "1.6.0",
+    "web3-eth-contract": "^1.6.0"
   }
 }

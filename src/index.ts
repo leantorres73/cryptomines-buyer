@@ -1,101 +1,88 @@
-import axios from "axios";
-const mysql = require('mysql2');
+const TelegramBot = require('node-telegram-bot-api');
+import axios from 'axios';
+import { buyNFT } from './buy';
+var cron = require('node-cron');
+require('dotenv').config();
 
-// create the connection to database
-const connection = mysql.createConnection({
-  host: process.env.DATABASE_URL,
-  user: process.env.DATABASE_USER,
-  database: process.env.DATABASE_NAME,
-  password: process.env.DATABASE_PASSWORD,
-  port: process.env.DATABASE_PORT
+var token = process.env.TELEGRAM_TOKEN;
+const receiver = process.env.TELEGRAM_CHANNEL;
+
+var bot = new TelegramBot(token, {polling: true});
+const cheap:any = [];
+let oldArray:any = [];
+let firstExecution = true;
+
+cron.schedule('*/5 * * * * *', async () => {
+  let workers = (await axios.get('https://api.cryptomines.app/api/workers')).data;
+  workers = workers.map((x:any) => {
+    return  {
+      ...x,
+      price: x.price / 1000000000000000000
+    }
+  });
+  workers.sort((a: any, b: any) => (a.price > b.price) ? 1 : -1);
+  oldArray = workers;
+  calculateCheap(workers);
+  firstExecution = false;
 });
 
-const token: string = process.env.TOKEN  || '';
+const calculateCheap = async (workers: any) => {
+  for (let i = 0; i < workers.length; i++) {
+    if (workers[i+1]) {
+      // I'm looking for minePower > 100
+      if (workers[i].nftData.minePower >= 100 && (workers[i].price < workers[i+1].price * 0.7 || workers[i].nftData.minePower > workers[i+1].nftData.minePower * 1.25)) {
+        if (checkWorker(workers[i], workers)) {
+          if (!cheap.find((x:any) => x == workers[i].marketId)) {
+            cheap.push(workers[i].marketId);
+            const message = `Cheap worker: marketId: ${workers[i].marketId} level: ${workers[i].nftData.level} price: ${workers[i].price} power: ${workers[i].nftData.minePower}`;
+            const message2 = `Next worker: marketId: ${workers[i+1].marketId} level: ${workers[i+1].nftData.level} price: ${workers[i+1].price} power: ${workers[i+1].nftData.minePower}`;
+            !firstExecution && bot.sendMessage(receiver, generateWorkerMessage(workers[i], oldArray));
+            await buyNFT(workers[i].marketId, workers[i].price);
+            console.log(message);
+            console.log(message2);
+            console.log('---------------------');
+          }
+        }
+      }
+    }
+  };
+  const diff = cheap.filter((x:any) => workers.map((x:any) => x.marketId).indexOf(x) === -1);
+  diff.map((x:any)=> {
+    !firstExecution && bot.sendMessage(receiver, `Sold: ${x}`);
+    removeItemOnce(cheap, x);
+  })
+}
 
-exports.main = async (event: any) => {
-  // cloudwatch
-  if (event && event.type && event.type === 'crawlData') {
-    return await findPlants(token);
-  } else if (event && event.type && event.type === 'nearPlants') {
-    // we can handle endpoints here if we want
-    return await getNearPlans();
+function removeItemOnce(arr:any, value:any) {
+  var index = arr.indexOf(value);
+  if (index > -1) {
+    arr.splice(index, 1);
   }
-  return;
+  return arr;
+}
+
+
+const checkWorker = (element:any, array:any) => {
+  array = array.filter((x:any) => x.nftData.minePower > element.nftData.minePower -10 && x.nftData.minePower < element.nftData.minePower +10 && x.marketId != element.marketId);
+  array.sort((a: any, b: any) => (a.price > b.price) ? 1 : -1);
+  if (array.length && array[0].price * 0.7 > element.price) {
+    return true
+  }
+  return false;
+}
+
+const getPage = (worker: any, list: any[]) => {
+  const page = list.map((x:any) => x.marketId).indexOf(worker.marketId) / 8;
+  return Math.trunc(page);
+}
+
+const generateWorkerMessage = (worker: any, workers: any[]) => {
+  const now = new Date();
+  const diff = (now.getTime() - parseInt(worker.nftData.contractDueDate) * 1000) / (1000 * 3600 * 24);
+  return `Level: ${worker.nftData.level}
+Price: ${worker.price}
+Power: ${worker.nftData.minePower}
+Contract days left: ${diff > 0 ? Math.trunc(diff) : 0}
+MarketId: ${worker.marketId}
+Page: ~${getPage(worker, workers)}`
 } 
-
-const findPlants = async (token: string) => {
-  const lands = getLands();
-  for (const land of lands) {
-    await timeout(200);
-    const resp = (await axios.get(`https://backend-farm.plantvsundead.com/land/${land.x}/${land.y}`, {
-      headers: {
-        'User-Agent': 'PVU',
-        'Authorization': `Bearer Token: ${token}`
-      },
-    }))?.data?.data;
-    if (resp.ownerId) {
-      const ownerId = resp.ownerId;
-      // check plants for owner ID
-      const plantResponse = await getPlants(ownerId);
-      // check active tools
-      for (const plant of plantResponse) {
-        await connection.query(
-          'REPLACE INTO plants SET id = ?, plant = ?, date = ?, URL = ?, crawlDate = ?', [
-            plant.id,
-            JSON.stringify(plant),
-            new Date(plant.activeTools.find((tool: any) => tool.type === 'WATER').endTime),
-            `https://marketplace.plantvsundead.com/login#/farm/${plant.id}`,
-             new Date()
-          ]);
-      }
-    }
-  }
-}
-
-const getPlants = async (ownerId: string, offset = 0): Promise<any[]> => {
-  let still = true;
-  let plants: any[] = [];
-  const maxPagelimit = 20;
-  while (still) {
-    await timeout(200);
-    const response = (await axios.get(`https://backend-farm.plantvsundead.com/farms/other/${ownerId}?limit=${maxPagelimit}&offset=${offset}`, {
-      headers: {
-        'User-Agent': 'PVU',
-        'Authorization': `Bearer Token: ${token}`
-      },
-    }))?.data;
-    if (response.status === 0) {
-      plants = plants.concat(response.data);
-      if (response.total > offset + maxPagelimit) {
-        offset += maxPagelimit;
-        still = true;
-      } else {
-        still = false;
-      }
-    } else {
-      still = false;
-    }
-  }
-  return plants;
-}
-
-const getNearPlans = async () => {
-  return await connection.query(
-    'SELECT * from pvu.plants WHERE date <= NOW() - INTERVAL 10 MINUTE;');
-}
-
-const getLands = () => {
-  const lands = [];
-  const min = -16;
-  const max = 16;
-  for (let x = min; x < max; x++) {
-    for (let y = min; y < max; y++) {
-      lands.push({x, y});
-    }
-  }
-  return lands;
-}
-
-function timeout(ms: number) {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
