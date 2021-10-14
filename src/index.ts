@@ -33,7 +33,12 @@ const calculateCheap = async (workers: any) => {
         if (checkWorker(workers[i], workers)) {
           if (!cheap.find((x:any) => x == workers[i].marketId)) {
             cheap.push(workers[i].marketId);
-            await buyNFT(workers[i].marketId, workers[i].price);
+            try {
+              await buyNFT(workers[i].marketId, workers[i].price);
+              bot.sendMessage(receiver, `Bought worker ${workers[i].marketId}`);
+            } catch (ex) {
+              console.log(ex);
+            }
             const message = `Cheap worker: marketId: ${workers[i].marketId} level: ${workers[i].nftData.level} price: ${workers[i].price} power: ${workers[i].nftData.minePower}`;
             const message2 = `Next worker: marketId: ${workers[i+1].marketId} level: ${workers[i+1].nftData.level} price: ${workers[i+1].price} power: ${workers[i+1].nftData.minePower}`;
             !firstExecution && bot.sendMessage(receiver, generateWorkerMessage(workers[i], oldArray));
