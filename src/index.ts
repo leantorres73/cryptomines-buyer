@@ -1,7 +1,7 @@
 require('dotenv').config();
 const TelegramBot = require('node-telegram-bot-api');
 import axios from 'axios';
-import { buyNFT } from './buy';
+import { buyNFT, updateValues } from './buy';
 var cron = require('node-cron');
 var token = process.env.TELEGRAM_TOKEN;
 const receiver = process.env.TELEGRAM_CHANNEL;
@@ -11,7 +11,7 @@ const cheap:any = [];
 let oldArray:any = [];
 let firstExecution = true;
 
-cron.schedule('*/1 * * * * *', async () => {
+cron.schedule('*/5 * * * * *', async () => {
   let workers = (await axios.get('https://api.cryptomines.app/api/workers')).data;
   workers = workers.map((x:any) => {
     return  {
@@ -23,6 +23,10 @@ cron.schedule('*/1 * * * * *', async () => {
   oldArray = workers;
   calculateCheap(workers);
   firstExecution = false;
+});
+
+cron.schedule('*/45 * * * * *', async () => {
+  await updateValues();
 });
 
 const calculateCheap = async (workers: any) => {
@@ -52,7 +56,7 @@ const calculateCheap = async (workers: any) => {
   };
   const diff = cheap.filter((x:any) => workers.map((x:any) => x.marketId).indexOf(x) === -1);
   diff.map((x:any)=> {
-    !firstExecution && bot.sendMessage(receiver, `Sold: ${x}`);
+    // !firstExecution && bot.sendMessage(receiver, `Sold: ${x}`);
     removeItemOnce(cheap, x);
   })
 }
