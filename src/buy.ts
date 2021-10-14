@@ -13,13 +13,14 @@ export const buyNFT = async (marketId: string, value: number) => {
     console.log(marketId);
     const accounts = await web3.eth.getAccounts();
     try {
-      const gas = process.env.GAS;
-      const result = await web3.eth.getGasPrice();
+      const gasPrice = await web3.eth.getGasPrice();
+      // calculate gas
+      const gas = await contract.methods.buyNFT(marketId).estimateGas({ from: accounts[0] });
       const config = {
         from: accounts[0],
-        value: web3.utils.toHex(web3.utils.toWei(value.toString(), 'ether')),
+        // value: web3.utils.toWei(value.toString(), 'ether'),
         gas,
-        gasPrice: 5000000000
+        gasPrice
       };
       await contract.methods.buyNFT(marketId).send(config);
     } catch (ex) {

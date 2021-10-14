@@ -1,9 +1,8 @@
+require('dotenv').config();
 const TelegramBot = require('node-telegram-bot-api');
 import axios from 'axios';
 import { buyNFT } from './buy';
 var cron = require('node-cron');
-require('dotenv').config();
-
 var token = process.env.TELEGRAM_TOKEN;
 const receiver = process.env.TELEGRAM_CHANNEL;
 
