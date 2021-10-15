@@ -1,3 +1,5 @@
+import { oldArray } from ".";
+
 const Web3 = require('web3');
 const Provider = require('@truffle/hdwallet-provider');
 const abiString = process.env.ABI || '[]';
@@ -9,12 +11,21 @@ const contract  = new web3.eth.Contract(abi, process.env.GAME_CONTRACT);
 export let gasPrice : string;
 export let gas: number;
 export let account: string;
-
+let firstExecution = true;
 export const updateValues = async () => {
-  gasPrice = await web3.eth.getGasPrice();
-  const accounts = await web3.eth.getAccounts();
-  account = accounts[0];
-  gas = await contract.methods.buyNFT("9059").estimateGas({ from: account });
+  try {
+    if (firstExecution) {
+      const accounts = await web3.eth.getAccounts();
+      gasPrice = await web3.eth.getGasPrice();
+      account = accounts[0];
+      firstExecution = false;
+    }
+    if (oldArray.length > 1) {
+      gas = await contract.methods.buyNFT(oldArray[0].marketId).estimateGas({ from: account });
+    }
+  } catch (ex) {
+    console.log(ex);
+  }
 }
 
 export const buyNFT = async (marketId: string, value: number) => {

@@ -8,10 +8,10 @@ const receiver = process.env.TELEGRAM_CHANNEL;
 
 var bot = new TelegramBot(token, {polling: true});
 const cheap:any = [];
-let oldArray:any = [];
-let firstExecution = true;
+export let oldArray:any = [];
+export let firstExecution = true;
 
-cron.schedule('*/5 * * * * *', async () => {
+cron.schedule('*/2 * * * * *', async () => {
   let workers = (await axios.get('https://api.cryptomines.app/api/workers')).data;
   workers = workers.map((x:any) => {
     return  {
