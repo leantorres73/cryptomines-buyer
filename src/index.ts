@@ -1,7 +1,7 @@
 require('dotenv').config();
 
 import axios from 'axios';
-import { buyNFT, updateValues } from './buy';
+import { buyNFT } from './buy';
 import { sendMessage } from './telegram';
 var cron = require('node-cron');
 
@@ -9,7 +9,7 @@ const cheap:any = [];
 export let oldArray:any = [];
 export let firstExecution = true;
 
-cron.schedule('*/2 * * * * *', async () => {
+cron.schedule('*/1 * * * * *', async () => {
   let workers = (await axios.get('https://api.cryptomines.app/api/workers')).data;
   workers = workers.map((x:any) => {
     return  {
@@ -23,9 +23,6 @@ cron.schedule('*/2 * * * * *', async () => {
   firstExecution = false;
 });
 
-cron.schedule('*/45 * * * * *', async () => {
-  await updateValues();
-});
 const calculateCheap = async (workers: any) => {
   for (let i = 0; i < workers.length; i++) {
     if (workers[i+1]) {
@@ -35,8 +32,10 @@ const calculateCheap = async (workers: any) => {
           if (!cheap.find((x:any) => x == workers[i].marketId)) {
             cheap.push(workers[i].marketId);
             try {
-              await buyNFT(workers[i].marketId, workers[i].price);
-              sendMessage(`Bought worker ${workers[i].marketId}`);
+              if (workers[i].price < 3) {
+                await buyNFT(workers[i].marketId, workers[i].price);
+                sendMessage(`Bought worker ${workers[i].marketId}`);
+              }
             } catch (ex) {
               console.log(ex);
             }
