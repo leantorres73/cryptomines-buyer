@@ -21,7 +21,7 @@ export const updateValues = async () => {
       firstExecution = false;
     }
     if (oldArray.length > 1) {
-      gas = await contract.methods.buyNFT(oldArray[0].marketId).estimateGas({ from: account });
+      gas = await contract.methods.buyNFT(oldArray[100].marketId).estimateGas({ from: account });
     }
   } catch (ex) {
     console.log(ex);
