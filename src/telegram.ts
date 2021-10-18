@@ -5,7 +5,6 @@ if (process.env.TELEGRAM_UP) {
   var bot = new TelegramBot(token, {polling: true});
 }
 
-
 export const sendMessage = (message: string) => {
   process.env.TELEGRAM_UP && bot.sendMessage(receiver, message);
 }
