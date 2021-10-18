@@ -1,7 +1,7 @@
 require('dotenv').config();
 
 import axios from 'axios';
-import { buyNFT } from './buy';
+import { buyNFT, findNextWorkers } from './buy';
 import { sendMessage } from './telegram';
 var cron = require('node-cron');
 
@@ -10,14 +10,19 @@ export let oldArray:any = [];
 export let firstExecution = true;
 const eternalLimit: number = parseInt(process.env.ETERNAL_LIMIT || '3');
 
-cron.schedule('*/1 * * * * *', async () => {
-  let workers = (await axios.get('https://api.cryptomines.app/api/workers')).data;
-  workers = workers.map((x:any) => {
-    return  {
-      ...x,
-      price: x.price / 1000000000000000000
-    }
-  });
+const initialized = false;
+cron.schedule('*/15 * * * * *', async () => {
+  let workers;
+  if (!initialized) {
+    workers = (await axios.get('https://api.cryptomines.app/api/workers')).data;
+    workers = workers.map((x:any) => {
+      return  {
+        ...x,
+        price: x.price / 1000000000000000000
+      }
+    });
+  };
+  await findNextWorkers(workers);
   workers.sort((a: any, b: any) => (a.price > b.price) ? 1 : -1);
   oldArray = workers;
   calculateCheap(workers);
@@ -33,9 +38,10 @@ const calculateCheap = async (workers: any) => {
           if (!cheap.find((x:any) => x == workers[i].marketId)) {
             cheap.push(workers[i].marketId);
             try {
-              if (workers[i].price < eternalLimit) {
+              // this is a safe validation to avoid buying too expensive,
+              if (!workers[i].isSold && workers[i].price < eternalLimit) {
                 await buyNFT(workers[i]);
-                sendMessage(`Bought worker ${workers[i].marketId}`);
+                console.log(`Bought worker ${workers[i].marketId}`);
               }
             } catch (ex) {
               console.log(ex);

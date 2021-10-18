@@ -1,19 +1,72 @@
-import { oldArray } from ".";
-
 const Web3 = require('web3');
 const Provider = require('@truffle/hdwallet-provider');
 const abiString = process.env.ABI || '[]';
 const abi = JSON.parse(abiString);
 
+const provider = new Provider(process.env.METAMASK_SECRET, 'https://bsc-dataseed1.binance.org:443'); 
+const web3 = new Web3(provider);
+const contract  = new web3.eth.Contract(abi, process.env.GAME_CONTRACT);
+//provider 2 
+//WORKER CONTRACT
+const abiString2 = process.env.ABI2 || '[]';
+const abi2 = JSON.parse(abiString2);
+const provider2 = new Provider(process.env.METAMASK_SECRET, 'https://bsc-dataseed1.binance.org:443'); 
+const web32 = new Web3(provider2);
+const contract2  = new web32.eth.Contract(abi2, process.env.WORKER_CONTRACT);
+
 export let gasPrice : string = process.env.GAS_PRICE || '';
 export let gas: number = parseInt(process.env.GAS || '0');
 export let account: string = process.env.ACCOUNT || '';
 
+export const findNextWorkers = async (workers: any[]) => {
+  try {
+    workers.sort((a: any, b: any) => b.marketId - a.marketId);
+
+    // calculate gas
+    const config = {
+      from: process.env.WORKER_CONTRACT
+    };
+    let nextMarket = workers[0].marketId;
+    while (nextMarket != 0) {
+      nextMarket++;
+      try {
+        const worker = await contract.methods.getMarketItem(nextMarket).call(config);
+        nextMarket = worker['marketId'];
+        if (nextMarket != 0) {
+          const tokenDetails = await contract2.methods.getTokenDetails(worker['tokenId']).call(config);
+          if (worker['nftType'] == 0) {
+            const buildWorker = {
+              marketId: worker['marketId'],
+              nftType: worker['nftType'],
+              tokenId: worker['tokenId'],
+              sellerAddress: worker['sellerAddress'],
+              buyerAddress: worker['buyerAddress'],
+              price: worker['price'] / 1000000000000000000, 
+              isSold: worker['buyerAddress'] == '0x0000000000000000000000000000000000000000' ? false : true,
+              nftData: {
+                roll: tokenDetails['roll'],
+                level: tokenDetails['level'],
+                minePower: tokenDetails['minePower'],
+                firstName: tokenDetails['firstName'],
+                lastName: tokenDetails['lastName'],
+                contractDueDate: tokenDetails['contractDueDate'],
+                lastMine: tokenDetails['lastMine']
+              }
+            };
+            workers.push(buildWorker);
+          }
+        }
+      } catch (ex) {
+        nextMarket = 0;
+        break;
+      }
+    }
+  } catch (ex) {
+    console.log(ex);
+  }
+}
+
 export const buyNFT = async (worker: any) => {
-  // this is a safe validation to avoid buying too expensive,
-  const provider = new Provider(process.env.METAMASK_SECRET, 'https://bsc-dataseed1.binance.org:443'); 
-  const web3 = new Web3(provider);
-  const contract  = new web3.eth.Contract(abi, process.env.GAME_CONTRACT);
   console.log(worker);
   // calculate gas
   const config = {
