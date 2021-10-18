@@ -8,6 +8,7 @@ var cron = require('node-cron');
 const cheap:any = [];
 export let oldArray:any = [];
 export let firstExecution = true;
+const eternalLimit: number = parseInt(process.env.ETERNAL_LIMIT || '3');
 
 cron.schedule('*/1 * * * * *', async () => {
   let workers = (await axios.get('https://api.cryptomines.app/api/workers')).data;
@@ -32,8 +33,8 @@ const calculateCheap = async (workers: any) => {
           if (!cheap.find((x:any) => x == workers[i].marketId)) {
             cheap.push(workers[i].marketId);
             try {
-              if (workers[i].price < 3) {
-                await buyNFT(workers[i].marketId, workers[i].price);
+              if (workers[i].price < eternalLimit) {
+                await buyNFT(workers[i]);
                 sendMessage(`Bought worker ${workers[i].marketId}`);
               }
             } catch (ex) {
