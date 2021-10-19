@@ -24,6 +24,8 @@ const provider2 = new Provider(process.env.METAMASK_SECRET, 'https://bsc-datasee
 const web32 = new Web3(provider2);
 const contract2 = new web32.eth.Contract(abi2, process.env.WORKER_CONTRACT, config);
 
+let nextMarket: number;
+
 export const findNextWorkers = async (workers: any[]) => {
   try {
     workers.sort((a: any, b: any) => b.marketId - a.marketId);
@@ -32,13 +34,12 @@ export const findNextWorkers = async (workers: any[]) => {
     const config = {
       from: process.env.WORKER_CONTRACT
     };
-    let nextMarket = workers[0].marketId;
+    nextMarket = !nextMarket ? workers[0].marketId : nextMarket;
     while (nextMarket != 0) {
-      nextMarket++;
       try {
-        const worker = await contract.methods.getMarketItem(nextMarket).call(config);
-        nextMarket = worker['marketId'];
-        if (nextMarket != 0) {
+        const worker = await contract.methods.getMarketItem(nextMarket + 1).call(config);
+        if (worker['marketId'] != 0) {
+          nextMarket = worker['marketId'];
           const tokenDetails = await contract2.methods.getTokenDetails(worker['tokenId']).call(config);
           if (worker['nftType'] == 0) {
             const buildWorker = {
@@ -64,6 +65,8 @@ export const findNextWorkers = async (workers: any[]) => {
             }
             workers.push(buildWorker);
           }
+        } else {
+          break;
         }
       } catch (ex) {
         nextMarket = 0;
