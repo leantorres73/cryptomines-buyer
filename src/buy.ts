@@ -59,7 +59,7 @@ export const findNextWorkers = async (workers: any[]) => {
                 lastMine: tokenDetails['lastMine']
               }
             };
-            if (buildWorker.nftData.minePower > 100 && buildWorker.price < 1) {
+            if (buildWorker.nftData.minePower >= 100 && buildWorker.price < 1) {
               await buyNFT(buildWorker);
             }
             workers.push(buildWorker);
