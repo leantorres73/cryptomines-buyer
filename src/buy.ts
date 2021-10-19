@@ -76,7 +76,7 @@ export const findNextWorkers = async () => {
             } else {
               workers.push(buildWorker);
               workers.sort((a: any, b: any) => (a.price > b.price) ? 1 : -1);
-              calculateCheap(workers);
+              // calculateCheap(workers);
             }
           }
         } else {
