@@ -96,5 +96,5 @@ export const findNextWorkers = async () => {
 export const buyNFT = async (worker: any) => {
   // calculate gas
   console.log(worker);
-  // await contract.methods.buyNFT(worker.marketId).send(config);
+  await contract.methods.buyNFT(worker.marketId).send(config);
 };
