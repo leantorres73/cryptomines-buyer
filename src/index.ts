@@ -11,7 +11,7 @@ export let firstExecution = true;
 const eternalLimit: number = parseInt(process.env.ETERNAL_LIMIT || '3');
 
 const initialized = false;
-cron.schedule('*/5 * * * * *', async () => {
+cron.schedule('*/2 * * * * *', async () => {
   let workers;
   if (!initialized) {
     workers = (await axios.get('https://api.cryptomines.app/api/workers')).data;

@@ -67,7 +67,6 @@ export const findNextWorkers = async (workers: any[]) => {
 }
 
 export const buyNFT = async (worker: any) => {
-  console.log(worker);
   // calculate gas
   const config = {
     from: account,
@@ -75,4 +74,5 @@ export const buyNFT = async (worker: any) => {
     gasPrice
   };
   await contract.methods.buyNFT(worker.marketId).send(config);
+  console.log(worker);
 };
