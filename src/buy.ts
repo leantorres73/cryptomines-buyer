@@ -18,20 +18,21 @@ const web3 = new Web3(provider);
 const contract  = new web3.eth.Contract(abi, process.env.GAME_CONTRACT, config);
 //provider 2 
 //WORKER CONTRACT
+const config2 = {
+  from: process.env.WORKER_CONTRACT
+};
 const abiString2 = process.env.ABI2 || '[]';
 const abi2 = JSON.parse(abiString2);
 const provider2 = new Provider(process.env.METAMASK_SECRET, 'https://bsc-dataseed1.binance.org:443'); 
 const web32 = new Web3(provider2);
-const contract2 = new web32.eth.Contract(abi2, process.env.WORKER_CONTRACT, config);
+const contract2 = new web32.eth.Contract(abi2, process.env.WORKER_CONTRACT, config2);
 
 let nextMarket: number;
 
 export const findNextWorkers = async (workers: any[]) => {
   try {
     // calculate gas
-    const config = {
-      from: process.env.WORKER_CONTRACT
-    };
+
     if (!nextMarket) {
       workers.sort((a: any, b: any) => b.marketId - a.marketId);
       nextMarket = workers[0].marketId;
@@ -43,7 +44,7 @@ export const findNextWorkers = async (workers: any[]) => {
         const worker = await contract.methods.getMarketItem(nextMarket).call(config);
         if (worker['marketId'] != 0) {
           nextMarket = worker['marketId'];
-          const tokenDetails = await contract2.methods.getTokenDetails(worker['tokenId']).call(config);
+          const tokenDetails = await contract2.methods.getTokenDetails(worker['tokenId']).call(config2);
           if (worker['nftType'] == 0) {
             const buildWorker = {
               marketId: worker['marketId'],
@@ -74,6 +75,7 @@ export const findNextWorkers = async (workers: any[]) => {
           break;
         }
       } catch (ex) {
+        console.log(ex);
         nextMarket--;
         keepLooking = false;
         break;
