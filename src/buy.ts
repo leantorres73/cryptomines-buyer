@@ -69,6 +69,7 @@ export const findNextWorkers = async (workers: any[]) => {
             workers.push(buildWorker);
           }
         } else {
+          keepLooking = false;
           break;
         }
       } catch (ex) {
