@@ -44,7 +44,7 @@ export const findNextWorkers = async () => {
     if (!nextMarket) {
       workers.sort((a: any, b: any) => b.marketId - a.marketId);
       nextMarket = workers[0].marketId;
-    }
+    };
     while (true) {
       try {
         nextMarket++;
@@ -81,11 +81,9 @@ export const findNextWorkers = async () => {
           }
         } else {
           nextMarket--;
-          break;
         }
       } catch (ex) {
         nextMarket--;
-        break;
       }
     }
   } catch (ex) {
