@@ -36,7 +36,8 @@ export const findNextWorkers = async (workers: any[]) => {
       workers.sort((a: any, b: any) => b.marketId - a.marketId);
       nextMarket = workers[0].marketId;
     }
-    while (nextMarket != 0) {
+    let keepLooking = true;
+    while (keepLooking) {
       try {
         nextMarket++;
         const worker = await contract.methods.getMarketItem(nextMarket).call(config);
@@ -71,7 +72,7 @@ export const findNextWorkers = async (workers: any[]) => {
           break;
         }
       } catch (ex) {
-        nextMarket = 0;
+        keepLooking = false;
         break;
       }
     }
