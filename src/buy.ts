@@ -28,16 +28,18 @@ let nextMarket: number;
 
 export const findNextWorkers = async (workers: any[]) => {
   try {
-    workers.sort((a: any, b: any) => b.marketId - a.marketId);
-
     // calculate gas
     const config = {
       from: process.env.WORKER_CONTRACT
     };
-    nextMarket = !nextMarket ? workers[0].marketId : nextMarket;
+    if (!nextMarket) {
+      workers.sort((a: any, b: any) => b.marketId - a.marketId);
+      nextMarket = workers[0].marketId;
+    }
     while (nextMarket != 0) {
       try {
-        const worker = await contract.methods.getMarketItem(nextMarket + 1).call(config);
+        nextMarket++;
+        const worker = await contract.methods.getMarketItem(nextMarket).call(config);
         if (worker['marketId'] != 0) {
           nextMarket = worker['marketId'];
           const tokenDetails = await contract2.methods.getTokenDetails(worker['tokenId']).call(config);
