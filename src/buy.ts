@@ -3,20 +3,26 @@ const Provider = require('@truffle/hdwallet-provider');
 const abiString = process.env.ABI || '[]';
 const abi = JSON.parse(abiString);
 
+export let gasPrice : string = process.env.GAS_PRICE || '';
+export let gas: number = parseInt(process.env.GAS || '0');
+export let account: string = process.env.ACCOUNT || '';
+
+const config = {
+  from: account,
+  gas,
+  gasPrice
+};
+
 const provider = new Provider(process.env.METAMASK_SECRET, 'https://bsc-dataseed1.binance.org:443'); 
 const web3 = new Web3(provider);
-const contract  = new web3.eth.Contract(abi, process.env.GAME_CONTRACT);
+const contract  = new web3.eth.Contract(abi, process.env.GAME_CONTRACT, config);
 //provider 2 
 //WORKER CONTRACT
 const abiString2 = process.env.ABI2 || '[]';
 const abi2 = JSON.parse(abiString2);
 const provider2 = new Provider(process.env.METAMASK_SECRET, 'https://bsc-dataseed1.binance.org:443'); 
 const web32 = new Web3(provider2);
-const contract2  = new web32.eth.Contract(abi2, process.env.WORKER_CONTRACT);
-
-export let gasPrice : string = process.env.GAS_PRICE || '';
-export let gas: number = parseInt(process.env.GAS || '0');
-export let account: string = process.env.ACCOUNT || '';
+const contract2 = new web32.eth.Contract(abi2, process.env.WORKER_CONTRACT, config);
 
 export const findNextWorkers = async (workers: any[]) => {
   try {
@@ -68,11 +74,6 @@ export const findNextWorkers = async (workers: any[]) => {
 
 export const buyNFT = async (worker: any) => {
   // calculate gas
-  const config = {
-    from: account,
-    gas,
-    gasPrice
-  };
   await contract.methods.buyNFT(worker.marketId).send(config);
   console.log(worker);
 };
