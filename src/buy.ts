@@ -2,6 +2,8 @@ const Web3 = require('web3');
 const Provider = require('@truffle/hdwallet-provider');
 const abiString = process.env.ABI || '[]';
 const abi = JSON.parse(abiString);
+import axios from 'axios';
+import { calculateCheap } from '.';
 
 export let gasPrice : string = process.env.GAS_PRICE || '';
 export let gas: number = parseInt(process.env.GAS || '0');
@@ -28,17 +30,22 @@ const web32 = new Web3(provider2);
 const contract2 = new web32.eth.Contract(abi2, process.env.WORKER_CONTRACT, config2);
 
 let nextMarket: number;
-
-export const findNextWorkers = async (workers: any[]) => {
+let workers: any[];
+export const findNextWorkers = async () => {
   try {
     // calculate gas
-
+    workers = (await axios.get('https://api.cryptomines.app/api/workers')).data;
+    workers = workers.map((x:any) => {
+      return  {
+        ...x,
+        price: x.price / 1000000000000000000
+      }
+    });
     if (!nextMarket) {
       workers.sort((a: any, b: any) => b.marketId - a.marketId);
       nextMarket = workers[0].marketId;
     }
-    let keepLooking = true;
-    while (keepLooking) {
+    while (true) {
       try {
         nextMarket++;
         const worker = await contract.methods.getMarketItem(nextMarket).call(config);
@@ -66,18 +73,18 @@ export const findNextWorkers = async (workers: any[]) => {
             };
             if (buildWorker.nftData.minePower >= 100 && buildWorker.price < 1) {
               await buyNFT(buildWorker);
+            } else {
+              workers.push(buildWorker);
+              workers.sort((a: any, b: any) => (a.price > b.price) ? 1 : -1);
+              calculateCheap(workers);
             }
-            workers.push(buildWorker);
           }
         } else {
           nextMarket--;
-          keepLooking = false;
           break;
         }
       } catch (ex) {
-        console.log(ex);
         nextMarket--;
-        keepLooking = false;
         break;
       }
     }
@@ -88,6 +95,6 @@ export const findNextWorkers = async (workers: any[]) => {
 
 export const buyNFT = async (worker: any) => {
   // calculate gas
-  await contract.methods.buyNFT(worker.marketId).send(config);
   console.log(worker);
+  // await contract.methods.buyNFT(worker.marketId).send(config);
 };

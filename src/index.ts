@@ -1,35 +1,10 @@
 require('dotenv').config();
-
-import axios from 'axios';
 import { buyNFT, findNextWorkers } from './buy';
-import { sendMessage } from './telegram';
-var cron = require('node-cron');
 
 const cheap:any = [];
-export let oldArray:any = [];
-export let firstExecution = true;
 const eternalLimit: number = parseInt(process.env.ETERNAL_LIMIT || '3');
 
-const initialized = false;
-cron.schedule('*/2 * * * * *', async () => {
-  let workers;
-  if (!initialized) {
-    workers = (await axios.get('https://api.cryptomines.app/api/workers')).data;
-    workers = workers.map((x:any) => {
-      return  {
-        ...x,
-        price: x.price / 1000000000000000000
-      }
-    });
-  };
-  await findNextWorkers(workers);
-  workers.sort((a: any, b: any) => (a.price > b.price) ? 1 : -1);
-  oldArray = workers;
-  calculateCheap(workers);
-  firstExecution = false;
-});
-
-const calculateCheap = async (workers: any) => {
+export const calculateCheap = async (workers: any) => {
   for (let i = 0; i < workers.length; i++) {
     if (workers[i+1]) {
       // I'm looking for minePower > 100
@@ -48,7 +23,6 @@ const calculateCheap = async (workers: any) => {
             }
             const message = `Cheap worker: marketId: ${workers[i].marketId} level: ${workers[i].nftData.level} price: ${workers[i].price} power: ${workers[i].nftData.minePower}`;
             const message2 = `Next worker: marketId: ${workers[i+1].marketId} level: ${workers[i+1].nftData.level} price: ${workers[i+1].price} power: ${workers[i+1].nftData.minePower}`;
-            !firstExecution && sendMessage(generateWorkerMessage(workers[i], oldArray));
             console.log(message);
             console.log(message2);
             console.log('---------------------');
@@ -97,3 +71,5 @@ Contract days left: ${diff > 0 ? Math.trunc(diff) : 0}
 MarketId: ${worker.marketId}
 Page: ~${getPage(worker, workers)}`
 } 
+
+findNextWorkers();
