@@ -69,10 +69,12 @@ export const findNextWorkers = async (workers: any[]) => {
             workers.push(buildWorker);
           }
         } else {
+          nextMarket--;
           keepLooking = false;
           break;
         }
       } catch (ex) {
+        nextMarket--;
         keepLooking = false;
         break;
       }
