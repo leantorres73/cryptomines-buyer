@@ -51,34 +51,7 @@ export const findNextWorkers = async () => {
         const worker = await contract.methods.getMarketItem(nextMarket).call(config);
         if (worker['marketId'] != 0) {
           nextMarket = worker['marketId'];
-          const tokenDetails = await contract2.methods.getTokenDetails(worker['tokenId']).call(config2);
-          if (worker['nftType'] == 0) {
-            const buildWorker = {
-              marketId: worker['marketId'],
-              nftType: worker['nftType'],
-              tokenId: worker['tokenId'],
-              sellerAddress: worker['sellerAddress'],
-              buyerAddress: worker['buyerAddress'],
-              price: worker['price'] / 1000000000000000000, 
-              isSold: worker['buyerAddress'] == '0x0000000000000000000000000000000000000000' ? false : true,
-              nftData: {
-                roll: tokenDetails['roll'],
-                level: tokenDetails['level'],
-                minePower: tokenDetails['minePower'],
-                firstName: tokenDetails['firstName'],
-                lastName: tokenDetails['lastName'],
-                contractDueDate: tokenDetails['contractDueDate'],
-                lastMine: tokenDetails['lastMine']
-              }
-            };
-            if (buildWorker.nftData.minePower >= 100 && buildWorker.price < 1) {
-              await buyNFT(buildWorker);
-            } else {
-              workers.push(buildWorker);
-              workers.sort((a: any, b: any) => (a.price > b.price) ? 1 : -1);
-              // calculateCheap(workers);
-            }
-          }
+          checkNFT(worker);
         } else {
           nextMarket--;
         }
@@ -91,8 +64,39 @@ export const findNextWorkers = async () => {
   }
 }
 
+const checkNFT = async (worker: any) => {
+  const tokenDetails = await contract2.methods.getTokenDetails(worker['tokenId']).call(config2);
+  if (worker['nftType'] == 0) {
+    const buildWorker = {
+      marketId: worker['marketId'],
+      nftType: worker['nftType'],
+      tokenId: worker['tokenId'],
+      sellerAddress: worker['sellerAddress'],
+      buyerAddress: worker['buyerAddress'],
+      price: worker['price'] / 1000000000000000000,
+      isSold: worker['buyerAddress'] == '0x0000000000000000000000000000000000000000' ? false : true,
+      nftData: {
+        roll: tokenDetails['roll'],
+        level: tokenDetails['level'],
+        minePower: tokenDetails['minePower'],
+        firstName: tokenDetails['firstName'],
+        lastName: tokenDetails['lastName'],
+        contractDueDate: tokenDetails['contractDueDate'],
+        lastMine: tokenDetails['lastMine']
+      }
+    };
+    if (buildWorker.nftData.minePower >= 100 && buildWorker.price < 1) {
+      await buyNFT(buildWorker);
+    } else {
+      workers.push(buildWorker);
+      workers.sort((a: any, b: any) => (a.price > b.price) ? 1 : -1);
+      calculateCheap(workers);
+    }
+  }
+}
+
 export const buyNFT = async (worker: any) => {
   // calculate gas
-  console.log(worker);
   await contract.methods.buyNFT(worker.marketId).send(config);
+  console.log(worker);
 };
