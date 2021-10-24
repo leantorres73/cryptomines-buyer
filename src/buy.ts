@@ -48,7 +48,9 @@ export const findNextWorkers = async () => {
     while (true) {
       try {
         nextMarket++;
-        const worker = await contract.methods.getMarketItem(nextMarket).call(config);
+        const worker = await contract.methods.getMarketItem(nextMarket).call({
+          from: account
+        });
         if (worker['marketId'] != 0) {
           nextMarket = worker['marketId'];
           checkNFT(worker);
@@ -60,43 +62,55 @@ export const findNextWorkers = async () => {
       }
     }
   } catch (ex) {
-    console.log(ex);
+    
   }
 }
 
 const checkNFT = async (worker: any) => {
-  const tokenDetails = await contract2.methods.getTokenDetails(worker['tokenId']).call(config2);
-  if (worker['nftType'] == 0) {
-    const buildWorker = {
-      marketId: worker['marketId'],
-      nftType: worker['nftType'],
-      tokenId: worker['tokenId'],
-      sellerAddress: worker['sellerAddress'],
-      buyerAddress: worker['buyerAddress'],
-      price: worker['price'] / 1000000000000000000,
-      isSold: worker['buyerAddress'] == '0x0000000000000000000000000000000000000000' ? false : true,
-      nftData: {
-        roll: tokenDetails['roll'],
-        level: tokenDetails['level'],
-        minePower: tokenDetails['minePower'],
-        firstName: tokenDetails['firstName'],
-        lastName: tokenDetails['lastName'],
-        contractDueDate: tokenDetails['contractDueDate'],
-        lastMine: tokenDetails['lastMine']
+  try {
+    const tokenDetails = await contract2.methods.getTokenDetails(worker['tokenId']).call(config2);
+    if (worker['nftType'] == 0) {
+      const buildWorker = {
+        marketId: worker['marketId'],
+        nftType: worker['nftType'],
+        tokenId: worker['tokenId'],
+        sellerAddress: worker['sellerAddress'],
+        buyerAddress: worker['buyerAddress'],
+        price: worker['price'] / 1000000000000000000,
+        isSold: worker['buyerAddress'] == '0x0000000000000000000000000000000000000000' ? false : true,
+        nftData: {
+          roll: tokenDetails['roll'],
+          level: tokenDetails['level'],
+          minePower: tokenDetails['minePower'],
+          firstName: tokenDetails['firstName'],
+          lastName: tokenDetails['lastName'],
+          contractDueDate: tokenDetails['contractDueDate'],
+          lastMine: tokenDetails['lastMine']
+        }
+      };
+      if (buildWorker.nftData.minePower >= 100 && buildWorker.price < 0.7) {
+        await buyNFT(buildWorker);
+      } else {
+        workers.push(buildWorker);
+        workers.sort((a: any, b: any) => (a.price > b.price) ? 1 : -1);
+        const index = workers.indexOf(buildWorker);
+        calculateCheap(buildWorker, index, workers);
       }
-    };
-    if (buildWorker.nftData.minePower >= 100 && buildWorker.price < 1) {
-      await buyNFT(buildWorker);
-    } else {
-      workers.push(buildWorker);
-      workers.sort((a: any, b: any) => (a.price > b.price) ? 1 : -1);
-      calculateCheap(workers);
     }
+  } catch (ex) {
   }
+
 }
 
 export const buyNFT = async (worker: any) => {
   // calculate gas
-  await contract.methods.buyNFT(worker.marketId).send(config);
+  const buySend = await contract.methods.buyNFT(worker.marketId).send(config)
+  .on('error', async (error: any) => {
+    console.log(error);
+  })
+  .on('receipt', async (receipt: any) => {
+    console.log(receipt.contractAddress);
+  });
+  console.log(buySend);
   console.log(worker);
 };

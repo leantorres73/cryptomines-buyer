@@ -1,36 +1,34 @@
 require('dotenv').config();
 import { buyNFT, findNextWorkers } from './buy';
+import { sendMessage } from './telegram';
 
 const cheap:any = [];
 const eternalLimit: number = parseInt(process.env.ETERNAL_LIMIT || '3');
 
-export const calculateCheap = async (workers: any) => {
-  for (let i = 0; i < workers.length; i++) {
-    if (workers[i+1]) {
-      // I'm looking for minePower > 100
-      if (workers[i].nftData.minePower >= 100 && (workers[i].price < workers[i+1].price * 0.7 || workers[i].nftData.minePower > workers[i+1].nftData.minePower * 1.25)) {
-        if (checkWorker(workers[i], workers)) {
-          if (!cheap.find((x:any) => x == workers[i].marketId)) {
-            cheap.push(workers[i].marketId);
-            try {
-              // this is a safe validation to avoid buying too expensive,
-              if (!workers[i].isSold && workers[i].price < eternalLimit) {
-                await buyNFT(workers[i]);
-                console.log(`Bought worker ${workers[i].marketId}`);
-              }
-            } catch (ex) {
-              console.log(ex);
-            }
-            const message = `Cheap worker: marketId: ${workers[i].marketId} level: ${workers[i].nftData.level} price: ${workers[i].price} power: ${workers[i].nftData.minePower}`;
-            const message2 = `Next worker: marketId: ${workers[i+1].marketId} level: ${workers[i+1].nftData.level} price: ${workers[i+1].price} power: ${workers[i+1].nftData.minePower}`;
-            console.log(message);
-            console.log(message2);
-            console.log('---------------------');
+export const calculateCheap = async (newWorker: any, i: number, workers: any[]) => {
+  // I'm looking for minePower > 100
+  if (newWorker.nftData.minePower >= 100 && (newWorker.price < workers[i+1].price * 0.7 || newWorker.nftData.minePower > workers[i+1].nftData.minePower * 1.25)) {
+    if (checkWorker(newWorker, workers)) {
+      if (!cheap.find((x:any) => x == newWorker.marketId)) {
+        cheap.push(newWorker.marketId);
+        try {
+          // this is a safe validation to avoid buying too expensive,
+          if (!newWorker.isSold && newWorker.price <= eternalLimit) {
+            await buyNFT(newWorker);
           }
+        } catch (ex) {
+          console.log(ex);
         }
+        const message = `Cheap worker: marketId: ${newWorker.marketId} level: ${newWorker.nftData.level} price: ${newWorker.price} power: ${newWorker.nftData.minePower}`;
+        const message2 = `Next worker: marketId: ${workers[i+1].marketId} level: ${workers[i+1].nftData.level} price: ${workers[i+1].price} power: ${workers[i+1].nftData.minePower}`;
+        sendMessage(generateWorkerMessage(newWorker, workers));
+        console.log(message);
+        console.log(message2);
+        console.log('---------------------');
       }
     }
-  };
+  }
+
   const diff = cheap.filter((x:any) => workers.map((x:any) => x.marketId).indexOf(x) === -1);
   diff.map((x:any)=> {
     // !firstExecution && bot.sendMessage(receiver, `Sold: ${x}`);
