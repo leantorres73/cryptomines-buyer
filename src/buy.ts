@@ -32,6 +32,7 @@ const contract2 = new web32.eth.Contract(abi2, process.env.WORKER_CONTRACT, conf
 let nextMarket: number;
 let workers: any[];
 export const findNextWorkers = async () => {
+  console.log('STARTING');
   try {
     // calculate gas
     workers = (await axios.get('https://api.cryptomines.app/api/workers')).data;
