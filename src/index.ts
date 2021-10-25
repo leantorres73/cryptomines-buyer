@@ -1,6 +1,7 @@
 require('dotenv').config();
-import { buyNFT, findNextWorkers } from './buy';
+import { buyNFT, checkNew, checkSold, findNextWorkers } from './buy';
 import { sendMessage } from './telegram';
+var cron = require('node-cron');
 
 const cheap:any = [];
 const eternalLimit: number = parseInt(process.env.ETERNAL_LIMIT || '3');
@@ -71,3 +72,15 @@ Page: ~${getPage(worker, workers)}`
 } 
 
 findNextWorkers();
+
+// Notify sold workers
+cron.schedule('*/10 * * * *', async () => {
+  console.log('check Sold');
+  await checkSold();
+});
+
+// Notify new workers
+cron.schedule('*/10 * * * *', async () => {
+  console.log('check New');
+  await checkNew();
+});

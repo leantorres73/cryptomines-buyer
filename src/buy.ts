@@ -1,6 +1,5 @@
 const Web3 = require('web3');
 const Provider = require('@truffle/hdwallet-provider');
-var cron = require('node-cron');
 
 const abiString = process.env.ABI || '[]';
 const abi = JSON.parse(abiString);
@@ -37,7 +36,7 @@ let workers: any[];
 let amountInMarket: any;
 let currentAmountOfWorkers: number;
 export const findNextWorkers = async () => {
-  console.log('STARTING');
+  console.log(`STARTING ${new Date()}`);
   currentAmountOfWorkers = (await contract2.methods.getMyWorkers(process.env.ACCOUNT).call({
     from: account
   })).length;
@@ -125,9 +124,7 @@ export const buyNFT = async (worker: any) => {
   console.log(worker);
 };
 
-
-// Notify sold workers
-cron.schedule('*/10 * * * *', async () => {
+export const checkSold = async () => {
   // get workers, find workers by sellerAddress
   let newWorkers = (await axios.get('https://api.cryptomines.app/api/workers')).data;
   newWorkers = newWorkers.filter((x:any) => x.sellerAddress == process.env.ACCOUNT).length;
@@ -135,10 +132,9 @@ cron.schedule('*/10 * * * *', async () => {
     await sendMessage(`Sold ${amountInMarket - newWorkers} worker`);
     amountInMarket = newWorkers; 
   }
-});
+};
 
-// Notify new workers
-cron.schedule('*/10 * * * *', async () => {
+export const checkNew = async () => {
   const currentAmount = (await contract2.methods.getMyWorkers(process.env.ACCOUNT).call({
     from: account
   })).length;
@@ -146,7 +142,7 @@ cron.schedule('*/10 * * * *', async () => {
     await sendMessage(`Bought ${currentAmount - currentAmountOfWorkers} worker`);
     currentAmountOfWorkers = currentAmount; 
   }
-});
+};
 
 function search(a: any[], v: any) {
   if(a[0]['price'] > v['price']) {
