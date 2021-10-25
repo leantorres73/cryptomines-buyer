@@ -1,9 +1,12 @@
 const Web3 = require('web3');
 const Provider = require('@truffle/hdwallet-provider');
+var cron = require('node-cron');
+
 const abiString = process.env.ABI || '[]';
 const abi = JSON.parse(abiString);
 import axios from 'axios';
 import { calculateCheap } from '.';
+import { sendMessage } from './telegram';
 
 export let gasPrice : string = process.env.GAS_PRICE || '';
 export let gas: number = parseInt(process.env.GAS || '0');
@@ -31,11 +34,17 @@ const contract2 = new web32.eth.Contract(abi2, process.env.WORKER_CONTRACT, conf
 
 let nextMarket: number;
 let workers: any[];
+let amountInMarket: any;
+let currentAmountOfWorkers: number;
 export const findNextWorkers = async () => {
   console.log('STARTING');
+  currentAmountOfWorkers = (await contract2.methods.getMyWorkers(process.env.ACCOUNT).call({
+    from: account
+  })).length;
   try {
     // calculate gas
     workers = (await axios.get('https://api.cryptomines.app/api/workers')).data;
+    amountInMarket = workers.filter(x => x.sellerAddress == process.env.ACCOUNT).length;
     workers = workers.map((x:any) => {
       return  {
         ...x,
@@ -45,6 +54,7 @@ export const findNextWorkers = async () => {
     if (!nextMarket) {
       workers.sort((a: any, b: any) => b.marketId - a.marketId);
       nextMarket = workers[0].marketId;
+      workers.sort((a: any, b: any) => (a.price > b.price) ? 1 : -1);
     };
     while (true) {
       try {
@@ -92,8 +102,7 @@ const checkNFT = async (worker: any) => {
       if (buildWorker.nftData.minePower >= 100 && buildWorker.price < 0.7) {
         await buyNFT(buildWorker);
       } else {
-        workers.push(buildWorker);
-        workers.sort((a: any, b: any) => (a.price > b.price) ? 1 : -1);
+        workers.splice(search(workers, buildWorker), 0, buildWorker);
         const index = workers.indexOf(buildWorker);
         calculateCheap(buildWorker, index, workers);
       }
@@ -115,3 +124,37 @@ export const buyNFT = async (worker: any) => {
   console.log(buySend);
   console.log(worker);
 };
+
+
+// Notify sold workers
+cron.schedule('*/10 * * * *', async () => {
+  // get workers, find workers by sellerAddress
+  let newWorkers = (await axios.get('https://api.cryptomines.app/api/workers')).data;
+  newWorkers = newWorkers.filter((x:any) => x.sellerAddress == process.env.ACCOUNT).length;
+  if (newWorkers < amountInMarket) {
+    await sendMessage(`Sold ${amountInMarket - newWorkers} worker`);
+    amountInMarket = newWorkers; 
+  }
+});
+
+// Notify new workers
+cron.schedule('*/10 * * * *', async () => {
+  const currentAmount = (await contract2.methods.getMyWorkers(process.env.ACCOUNT).call({
+    from: account
+  })).length;
+  if (currentAmount > currentAmountOfWorkers) {
+    await sendMessage(`Bought ${currentAmount - currentAmountOfWorkers} worker`);
+    currentAmountOfWorkers = currentAmount; 
+  }
+});
+
+function search(a: any[], v: any) {
+  if(a[0]['price'] > v['price']) {
+    return 0;
+  }
+  let i = 1;
+  while (i < a.length && !(a[i]['price'] > v['price'] && a[i-1]['price'] <= v['price'])) {
+    i = i + 1;
+  }
+  return i;
+}
